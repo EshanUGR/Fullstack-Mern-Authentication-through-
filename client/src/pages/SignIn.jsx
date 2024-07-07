@@ -1,12 +1,21 @@
 import React, { useState } from "react";
-import { Link,useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import {
+  signInStart,
+  signInFailure,
+  signInSuccess,
+} from "../redux/user/userSlice";
+import { useDispatch, useSelector } from "react-redux";
 
 const SignIn = () => {
   const [formData, setFormData] = useState({});
-  const [error, setError] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false); // Define local loading state
+  const [error, setError] = useState(null); // Define local error state
 
-const navigate=useNavigate();
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const { userLoading, userError } = useSelector((state) => state.user); // Get Redux state
+
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.id]: e.target.value });
   };
@@ -15,9 +24,10 @@ const navigate=useNavigate();
     e.preventDefault();
 
     setLoading(true);
-    setError(false);
+    setError(null);
 
     try {
+      dispatch(signInStart());
       const res = await fetch("/api/auth/signin", {
         method: "POST",
         headers: {
@@ -30,33 +40,32 @@ const navigate=useNavigate();
       setLoading(false);
 
       if (data.success === false) {
-        setError(true);
+        setError(data.message);
+        dispatch(signInFailure(data.message));
         return;
       }
-      navigate('/')
+
+      dispatch(signInSuccess(data));
+      navigate("/");
 
       if (res.ok) {
-        console.log("User created successfully");
+        console.log("User signed in successfully");
       } else {
-        console.log("Error creating user:", data);
-        setError(true);
+        console.log("Error signing in:", data);
+        setError("Error signing in");
       }
     } catch (error) {
       setLoading(false);
-      setError(true);
-      console.log("Network error:", error);
+      setError(error.toString());
+      dispatch(signInFailure(error.toString()));
     }
   };
 
   return (
     <div className="max-w-lg p-3 mx-auto">
-      <h1 className="text-3xl font-semibold text-center my-7">
-        Sign In
-      </h1>
+      <h1 className="text-3xl font-semibold text-center my-7">Sign In</h1>
 
       <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
-       
-
         <input
           type="email"
           placeholder="email"
@@ -78,19 +87,20 @@ const navigate=useNavigate();
         <button
           className="text-white uppercase rounded bg-slate-700 hover:opacity-95 disabled:opacity-80"
           type="submit"
-          disabled={loading}
+          disabled={loading || userLoading}
         >
-          {loading ? "Loading..." : "Sign In"}
+          {loading || userLoading ? "Loading..." : "Sign In"}
         </button>
       </form>
       <div>
-        <p>Dont Have an account?</p>
+        <p>Don't have an account?</p>
         <Link to="/sign-up">
           <span className="text-blue-500">Sign Up</span>
         </Link>
       </div>
-
-      {error && <p className="mt-5 text-red-700">Something went wrong!</p>}
+      <p className="mt-5 text-red-700">
+        {error ? error : userError ? userError : ""}
+      </p>
     </div>
   );
 };
