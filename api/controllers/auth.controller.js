@@ -93,7 +93,7 @@ next(error);
             httpOnly:true,
             expires:expiryDate,
 
-         })
+         }).status(200).json(rest);
 
       }
    }
